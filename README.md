@@ -6,6 +6,9 @@ This project performs a basic multivariate GARCH modelling exercise in Python. S
 
 ## Installation
 
+```bash
+$ pip install mvgarch
+```
 
 ## Usage
 
