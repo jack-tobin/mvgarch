@@ -76,5 +76,5 @@ dcc.plot()
 dcc.forecast(4)
 
 # extract aggregated simple return and covariance forecasts
-forecast_rets = dcc.fc_cov_agg_simp
+forecast_rets = dcc.fc_ret_agg_simp
 forecast_covs = dcc.fc_cov_agg_simp
