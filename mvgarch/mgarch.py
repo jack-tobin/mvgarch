@@ -1,5 +1,7 @@
 """Multivariate GARCH modelling."""
 
+from __future__ import annotations
+
 # ruff: noqa: N806
 
 from dataclasses import dataclass, field
@@ -12,7 +14,7 @@ import pandas as pd
 from numpy.linalg import det, inv, matrix_power
 from scipy.optimize import minimize
 
-from mvgarch.ugarch import UGARCH
+from ugarch import UGARCH
 
 
 @dataclass
