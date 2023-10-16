@@ -60,7 +60,7 @@ class UGARCH:
     def __post_init__(self) -> None:
         self.order_p, self.order_q = self.order
         if self.order != (1, 1):
-            raise NotImplementedError('Orders other than (1, 1) are not implemented')
+            raise NotImplementedError("Orders other than (1, 1) are not implemented")
 
     @property
     def returns(self) -> np.ndarray:
@@ -104,7 +104,7 @@ class UGARCH:
         self.fitted_vol_model = ZeroMean(
             y=self.arma_resids,
             volatility=self.vol_model,
-        ).fit(disp='off')
+        ).fit(disp="off")
 
         self.phis = self.fitted_mean_model.arparams()
         self.thetas = self.fitted_mean_model.maparams()
@@ -130,8 +130,9 @@ class UGARCH:
         self.n_ahead = n_ahead
 
         self.fc_means = self.fitted_mean_model.predict(n_periods=self.n_ahead)
-        self.fc_vol_model = self.fitted_vol_model.forecast(horizon=self.n_ahead,
-                                                           reindex=True)
+        self.fc_vol_model = self.fitted_vol_model.forecast(
+            horizon=self.n_ahead, reindex=True,
+        )
 
         self.fc_var = self.fc_vol_model.variance.tail(1).T.to_numpy().ravel()
         self.fc_vol = np.sqrt(self.fc_var)
@@ -151,33 +152,32 @@ class UGARCH:
         """
         fig, axes = plt.subplots(5, figsize=(6, 9), sharex=True)
         plt.tight_layout()
-        plt.subplots_adjust(left=0.1, right=0.93,
-                            bottom=0.1, top=0.9, hspace=0.4)
+        plt.subplots_adjust(left=0.1, right=0.93, bottom=0.1, top=0.9, hspace=0.4)
 
-        fig.suptitle(f'GJR-GARCH fitting results: {self.asset}')
+        fig.suptitle(f"GJR-GARCH fitting results: {self.asset}")
 
         # daily returns
         axes[0].plot(self.dates, self.returns)
-        axes[0].set_title('Periodic returns')
+        axes[0].set_title("Periodic returns")
         axes[0].yaxis.set_major_formatter(mtick.PercentFormatter())
 
         # non-standardised residuals
         axes[1].plot(self.dates, self.resid)
-        axes[1].set_title('Unstandardised residuals')
+        axes[1].set_title("Unstandardised residuals")
         axes[1].yaxis.set_major_formatter(mtick.PercentFormatter())
 
         # standardised residual
         axes[2].plot(self.dates, self.std_resid)
-        axes[2].set_title('Standardised residuals')
+        axes[2].set_title("Standardised residuals")
 
         # conditional mean
         axes[3].plot(self.dates, self.cond_mean)
-        axes[3].set_title('Conditional mean')
+        axes[3].set_title("Conditional mean")
         axes[3].yaxis.set_major_formatter(mtick.PercentFormatter())
 
         # conditional volatility
         axes[4].plot(self.dates, self.cond_vol)
-        axes[4].set_title('Conditional volatility')
+        axes[4].set_title("Conditional volatility")
         axes[4].yaxis.set_major_formatter(mtick.PercentFormatter())
 
         plt.show()
