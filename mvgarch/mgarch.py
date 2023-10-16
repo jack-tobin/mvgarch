@@ -4,8 +4,11 @@ from __future__ import annotations
 
 # ruff: noqa: N806
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from itertools import product
+from typing import TYPE_CHECKING
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -14,7 +17,8 @@ import pandas as pd
 from numpy.linalg import det, inv, matrix_power
 from scipy.optimize import minimize
 
-from ugarch import UGARCH
+if TYPE_CHECKING:
+    from mvgarch.ugarch import UGARCH
 
 
 @dataclass
@@ -27,7 +31,7 @@ class DCCGARCH:
     """
 
     assets: list[str] = field(init=False)
-    dates: pd.DatetimeIndex = field(init=False)
+    dates: pd.Index = field(init=False)
     _returns: np.ndarray = field(init=False)
     n_periods: int = field(init=False)
     n_assets: int = field(init=False)
@@ -87,7 +91,9 @@ class DCCGARCH:
         """
         for garch_obj in ugarch_objs:
             if garch_obj.order != (1, 1):
-                raise NotImplementedError('Orders other than (1, 1) are not implemented.')
+                raise NotImplementedError(
+                    "Orders other than (1, 1) are not implemented.",
+                )
 
         self.returns = returns
         self.ugarch_objs = ugarch_objs
@@ -167,8 +173,14 @@ class DCCGARCH:
         for k in range(1, self.n_ahead + 1):
             first_sum = np.zeros((self.n_assets, self.n_assets))
             for i in range(k - 2 + 1):
-                first_sum += (1 - self.dcc_a - self.dcc_b) * R_ * ((self.dcc_a + self.dcc_b)**i)
-            self.fc_cor[:, :, k - 1] = first_sum + (self.dcc_a + self.dcc_b)**(k - 1) * R0
+                first_sum += (
+                    (1 - self.dcc_a - self.dcc_b)
+                    * R_
+                    * ((self.dcc_a + self.dcc_b) ** i)
+                )
+            self.fc_cor[:, :, k - 1] = (
+                first_sum + (self.dcc_a + self.dcc_b) ** (k - 1) * R0
+            )
 
         # convert correlation matrices to covariance matrices.
         self.fc_cov = np.zeros((self.n_assets, self.n_assets, self.n_ahead))
@@ -184,8 +196,12 @@ class DCCGARCH:
         )
 
     @staticmethod
-    def dynamic_corr(res: np.ndarray, cvol: np.ndarray,
-                     dcc_a: int, dcc_b: int) -> tuple[np.ndarray]:
+    def dynamic_corr(
+        res: np.ndarray,
+        cvol: np.ndarray,
+        dcc_a: int,
+        dcc_b: int,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Compute dynamic conditional correlation array.
 
         Bbased on standardised residuals and fitted a and b values.
@@ -227,7 +243,11 @@ class DCCGARCH:
             if i == 0:
                 Q[:, :, i] = Q_
             else:
-                Q[:, :, i] = (1 - dcc_a - dcc_b) * Q_ + dcc_a * Z[:, :, i - 1] + dcc_b * Q[:, :, i - 1]  # noqa: E501
+                Q[:, :, i] = (
+                    (1 - dcc_a - dcc_b) * Q_
+                    + dcc_a * Z[:, :, i - 1]
+                    + dcc_b * Q[:, :, i - 1]
+                )
 
         # convert to correlation matrices: Rt = Qt^* Qt Qt^*
         R = np.zeros((n_assets, n_assets, n_periods))
@@ -275,20 +295,30 @@ class DCCGARCH:
         n_periods = res.shape[0]
 
         R = cls.dynamic_corr(res=res, cvol=cvol, dcc_a=dcc_a, dcc_b=dcc_b)[0]
-        QL = -0.5 * np.sum([np.log(det(R[:, :, i])) + np.dot(res[i, :].T, np.dot(inv(R[:, :, i]), res[i, :])) for i in range(n_periods)])  # noqa: E501
+        QL = -0.5 * np.sum(
+            [
+                np.log(det(R[:, :, i]))
+                + np.dot(res[i, :].T, np.dot(inv(R[:, :, i]), res[i, :]))
+                for i in range(n_periods)
+            ],
+        )
 
         return QL * -1
 
     def estimate_params(self) -> None:
         """Perform the maximum likelihood estimation of the DCC paramters a and b."""
-        constr = [{'type': 'ineq', 'fun': lambda x: 0.9999 - np.sum(x)},
-                  {'type': 'ineq', 'fun': lambda x: x}]
+        constr = [
+            {"type": "ineq", "fun": lambda x: 0.9999 - np.sum(x)},
+            {"type": "ineq", "fun": lambda x: x},
+        ]
 
-        solution = minimize(fun=self.qllf,
-                            x0=[0, 0],
-                            args=[self.std_resids, self.cond_vols],
-                            constraints=constr,
-                            options={'disp': False})
+        solution = minimize(
+            fun=self.qllf,
+            x0=[0, 0],
+            args=[self.std_resids, self.cond_vols],
+            constraints=constr,
+            options={"disp": False},
+        )
 
         self.dcc_a, self.dcc_b = solution.x
 
@@ -315,14 +345,21 @@ class DCCGARCH:
         # Phi contains diagonal phi and theta matrices
         E1 = np.concatenate([I, Z], axis=0)
         E = np.concatenate([I, I], axis=0)
-        Phi = np.concatenate([np.concatenate([phis, thetas], axis=1),
-                              np.concatenate([Z, Z], axis=1)], axis=0)
+        Phi = np.concatenate(
+            [np.concatenate([phis, thetas], axis=1), np.concatenate([Z, Z], axis=1)],
+            axis=0,
+        )
 
         first_sum = np.zeros((self.n_assets * 2, self.n_assets * 2))
         for i in range(1, self.n_ahead + 1):
             for k in range(i):
                 # formula here is Phi^k * E * sigma_i * (Phi^k E)'
-                first_sum += np.dot(np.dot(matrix_power(Phi, k), E), np.dot(self.fc_cov[:, :, i - k - 1], np.dot(matrix_power(Phi, k), E).T))  # noqa: E501
+                first_sum += np.dot(
+                    np.dot(matrix_power(Phi, k), E),
+                    np.dot(
+                        self.fc_cov[:, :, i - k - 1], np.dot(matrix_power(Phi, k), E).T,
+                    ),
+                )
 
         second_sum = np.zeros((self.n_assets * 2, self.n_assets * 2))
         for i, j in product(range(1, self.n_ahead + 1), range(1, self.n_ahead + 1)):
@@ -331,12 +368,24 @@ class DCCGARCH:
 
             for k in range(max(0, i - j), i):
                 # formula here is Phi^k * E * sigma_i * (Phi^(j-i+k) * K)'
-                second_sum += np.dot(np.dot(matrix_power(Phi, k), E), np.dot(self.fc_cov[:, :, i - k], np.dot(matrix_power(Phi, j - i + k), E).T))  # noqa: E501
+                second_sum += np.dot(
+                    np.dot(matrix_power(Phi, k), E),
+                    np.dot(
+                        self.fc_cov[:, :, i - k],
+                        np.dot(matrix_power(Phi, j - i + k), E).T,
+                    ),
+                )
 
-        self.fc_cov_agg_log = np.dot(E1.T, np.dot(first_sum, E1)) + np.dot(E1.T, np.dot(second_sum, E1))  # noqa: E501
+        self.fc_cov_agg_log = np.dot(E1.T, np.dot(first_sum, E1)) + np.dot(
+            E1.T, np.dot(second_sum, E1),
+        )
 
     @classmethod
-    def log_2_simple(cls, mu_log: np.ndarray, sigma_log: np.ndarray) -> tuple[np.ndarray, np.ndarray]:  # noqa: E501
+    def log_2_simple(
+        cls,
+        mu_log: np.ndarray,
+        sigma_log: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Convert log to simple returns.
 
         Converts a vector of expected log returns and a covariance matrix
@@ -377,41 +426,63 @@ class DCCGARCH:
             Figure axes object.
 
         """
-        fig, axes = plt.subplots(figsize=(9, 6), sharex=True, sharey=False,
-                                 ncols=self.n_assets, nrows=self.n_assets)
+        fig, axes = plt.subplots(
+            figsize=(9, 6),
+            sharex=True,
+            sharey=False,
+            ncols=self.n_assets,
+            nrows=self.n_assets,
+        )
         fig.tight_layout()
-        plt.subplots_adjust(left=0.05, right=0.95,
-                            bottom=0.08, top=0.9, hspace=0.3)
+        plt.subplots_adjust(left=0.05, right=0.95, bottom=0.08, top=0.9, hspace=0.3)
 
-        fig.suptitle('DCC-GARCH fit results.\nConditional volatility on diagonal; conditional correlations off diagonal')  # noqa: E501
+        fig.suptitle(
+            "DCC-GARCH fit results.\n"
+            "Conditional volatility on diagonal; conditional correlations off diagonal",
+        )
 
         for i, j in product(range(self.n_assets), range(self.n_assets)):
             if i == j:
-                self._plot_conditional_vol(self.cond_vols[:, i], self.assets[i], axes[i, j])
+                self._plot_conditional_vol(
+                    self.cond_vols[:, i], self.assets[i], axes[i, j],
+                )
             elif i < j:
                 self._disable_axis(axes[i, j])
             else:
-                self._plot_conditional_corr(self.cond_cor[i, j, :].T, self.assets[i], self.assets[j], axes[i, j])  # noqa: E501
+                self._plot_conditional_corr(
+                    self.cond_cor[i, j, :].T, self.assets[i], self.assets[j], axes[i, j],
+                )
 
         plt.show()
 
         return axes
 
-    def _plot_conditional_vol(self, cond_vol: np.ndarray, asset: str, axis: plt.Axes) -> None:
+    def _plot_conditional_vol(
+        self,
+        cond_vol: np.ndarray,
+        asset: str,
+        axis: plt.Axes,
+    ) -> None:
         axis.plot(self.dates, cond_vol)
         axis.set_title(asset)
         axis.xaxis.set_major_locator(mdates.YearLocator(3))
-        axis.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-        for label in axis.get_xticklabels(which='major'):
-            label.set(rotation=30, horizontalalignment='right')
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        for label in axis.get_xticklabels(which="major"):
+            label.set(rotation=30, horizontalalignment="right")
 
     def _disable_axis(self, axis: plt.Axes) -> None:
-        axis.axis('off')
+        axis.axis("off")
 
-    def _plot_conditional_corr(self, cond_corr: np.ndarray, asset1: str, asset2: str, axis: plt.Axes) -> None:  # noqa: E501
-        axis.plot(self.dates, cond_corr, color='firebrick')
-        axis.set_title(f'{asset1} : {asset2}')
+    def _plot_conditional_corr(
+        self,
+        cond_corr: np.ndarray,
+        asset1: str,
+        asset2: str,
+        axis: plt.Axes,
+    ) -> None:
+        axis.plot(self.dates, cond_corr, color="firebrick")
+        axis.set_title(f"{asset1} : {asset2}")
         axis.xaxis.set_major_locator(mdates.YearLocator(3))
-        axis.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-        for label in axis.get_xticklabels(which='major'):
-            label.set(rotation=30, horizontalalignment='right')
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        for label in axis.get_xticklabels(which="major"):
+            label.set(rotation=30, horizontalalignment="right")
