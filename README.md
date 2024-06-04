@@ -37,7 +37,7 @@ garch_specs = [UGARCH(order=(1, 1)) for _ in range(n_tickers)]
 
 # fit DCCGARCH to the return data
 dcc = DCCGARCH()
-dcc.spec(ugarch_objs=garch_specs, returns=rets)
+dcc.spec(ugarch_objs=garch_specs, returns=returns)
 dcc.fit()
 
 # forecast 4 weeks ahead
