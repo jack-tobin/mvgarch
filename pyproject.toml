@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mvgarch"
-version = "0.0.1"
+version = "1.0.0"
 authors = [
-  { name="James J. Tobin", email="james_jackson.tobin@kcl.ac.uk" },
+  { name="Jack Tobin", email="tobjack330@gmail.com" },
 ]
 description = "Multivariate GARCH modelling in Python"
 readme = "README.md"
@@ -16,6 +16,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows :: Windows 11",
+]
+dependencies = [
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "arch",
+  "pmdarima",
+  "scipy",
 ]
 
 [project.urls]

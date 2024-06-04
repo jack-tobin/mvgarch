@@ -64,12 +64,6 @@ class UGARCH:
 
     @property
     def returns(self) -> np.ndarray:
-        """Returns property.
-
-        Returns
-        -------
-            pd.Series: Series of returns.
-        """
         return self._returns
 
     @returns.setter
@@ -93,12 +87,7 @@ class UGARCH:
         self.vol_model = GARCH(p=self.order_p, o=self.order_p, q=self.order_q)
 
     def fit(self) -> None:
-        """Fit the univariate garch model to the data using MLE.
-
-        Returns
-        -------
-            Self: Instance of UGARCH.
-        """
+        """Fit the univariate garch model to the data using MLE."""
         self.fitted_mean_model = self.mean_model.fit(self.returns)
         self.arma_resids = self.fitted_mean_model.resid()
         self.fitted_vol_model = ZeroMean(
@@ -143,11 +132,6 @@ class UGARCH:
         First panel is daily returns, second is unstandardised residuals,
         third is standardised residuals, fourth is conditional mean, fifth
         is conditional volatility.
-
-        Returns
-        -------
-        plt.Axes
-            Figure plot axes.
 
         """
         fig, axes = plt.subplots(5, figsize=(6, 9), sharex=True)

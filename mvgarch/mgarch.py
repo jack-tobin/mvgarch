@@ -57,7 +57,6 @@ class DCCGARCH:
 
     @property
     def returns(self) -> np.ndarray:
-        """Get returns array."""
         return self._returns
 
     @returns.setter
@@ -283,7 +282,7 @@ class DCCGARCH:
         Returns
         -------
         float
-            Quasi- log likelihood times -1
+            Quasi-log-likelihood times -1
 
         """
         res, cvol = args
@@ -325,7 +324,7 @@ class DCCGARCH:
         Aggregate  the covariance matrix and returns for a given forecast horizon.
         This follows Hlouskova (2015).
 
-        NOTE This is only built for (1, 1) orders at the moment.
+        NOTE: This is only built for (1, 1) orders at the moment.
 
         """
         self.fc_ret_agg_log = self.fc_means.sum(axis=0)
@@ -416,11 +415,6 @@ class DCCGARCH:
         The resulting plot is a grid with conditional volatilities for each
         asset plotted on the diagonal and pairwis conditional correlations
         plotted on the off-diagonal.
-
-        Returns
-        -------
-        plt.Axes
-            Figure axes object.
 
         """
         fig, axes = plt.subplots(
