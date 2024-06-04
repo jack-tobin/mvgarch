@@ -8,7 +8,6 @@ from mvgarch.ugarch import UGARCH
 class TestDCCGARCH(unittest.TestCase):
 
     def test_success(self):
-        n_tickers = 2
         rets = pd.DataFrame([
             [0.0775, 0.0754],
             [0.0973, 0.0477],
