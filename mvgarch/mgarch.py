@@ -353,7 +353,8 @@ class DCCGARCH:
                 first_sum += np.dot(
                     np.dot(matrix_power(Phi, k), E),
                     np.dot(
-                        self.fc_cov[:, :, i - k - 1], np.dot(matrix_power(Phi, k), E).T,
+                        self.fc_cov[:, :, i - k - 1],
+                        np.dot(matrix_power(Phi, k), E).T,
                     ),
                 )
 
@@ -373,7 +374,8 @@ class DCCGARCH:
                 )
 
         self.fc_cov_agg_log = np.dot(E1.T, np.dot(first_sum, E1)) + np.dot(
-            E1.T, np.dot(second_sum, E1),
+            E1.T,
+            np.dot(second_sum, E1),
         )
 
     @classmethod
@@ -435,13 +437,18 @@ class DCCGARCH:
         for i, j in product(range(self.n_assets), range(self.n_assets)):
             if i == j:
                 self._plot_conditional_vol(
-                    self.cond_vols[:, i], self.assets[i], axes[i, j],
+                    self.cond_vols[:, i],
+                    self.assets[i],
+                    axes[i, j],
                 )
             elif i < j:
                 self._disable_axis(axes[i, j])
             else:
                 self._plot_conditional_corr(
-                    self.cond_cor[i, j, :].T, self.assets[i], self.assets[j], axes[i, j],
+                    self.cond_cor[i, j, :].T,
+                    self.assets[i],
+                    self.assets[j],
+                    axes[i, j],
                 )
 
         plt.show()

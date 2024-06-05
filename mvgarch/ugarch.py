@@ -120,7 +120,8 @@ class UGARCH:
 
         self.fc_means = self.fitted_mean_model.predict(n_periods=self.n_ahead)
         self.fc_vol_model = self.fitted_vol_model.forecast(
-            horizon=self.n_ahead, reindex=True,
+            horizon=self.n_ahead,
+            reindex=True,
         )
 
         self.fc_var = self.fc_vol_model.variance.tail(1).T.to_numpy().ravel()
