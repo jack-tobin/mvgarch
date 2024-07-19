@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+
 from mvgarch.mgarch import DCCGARCH
 from mvgarch.ugarch import UGARCH
 

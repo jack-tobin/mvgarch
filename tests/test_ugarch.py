@@ -3,8 +3,9 @@ import unittest
 import numpy as np
 import pandas as pd
 from arch.univariate.volatility import GARCH
-from mvgarch.ugarch import UGARCH
 from pmdarima.arima import ARIMA
+
+from mvgarch.ugarch import UGARCH
 
 
 class TestUGARCH(unittest.TestCase):
