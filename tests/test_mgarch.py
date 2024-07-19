@@ -109,17 +109,12 @@ class TestDCCGARCH(unittest.TestCase):
 
     def test_fc_vols_same_as_fc_cov_vols(self):
         returns = pd.DataFrame(np.random.normal(0.01, 0.02, size=(1000, 3)))
-        garch_specs = [
-            UGARCH(order=(1, 1)) for _ in range(returns.shape[1])
-        ]
+        garch_specs = [UGARCH(order=(1, 1)) for _ in range(returns.shape[1])]
         dcc = DCCGARCH()
         dcc.spec(ugarch_objs=garch_specs, returns=returns)
         dcc.fit()
 
         dcc.forecast(12)
         fc_cov = dcc.fc_cov
-        fc_vols = np.array([
-            dcc.get_vols_from_cov(fc_cov[:, :, i])
-            for i in range(fc_cov.shape[2])
-        ])
+        fc_vols = np.array([dcc.get_vols_from_cov(fc_cov[:, :, i]) for i in range(fc_cov.shape[2])])
         np.testing.assert_array_almost_equal(dcc.fc_vols, fc_vols, decimal=4)

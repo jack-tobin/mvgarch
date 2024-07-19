@@ -29,3 +29,9 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/jamesjtobin/mvgarch"
 "Bug Tracker" = "https://github.com/jamesjtobin/mvgarch/issues"
+
+[tool.ruff]
+include = ["mvgarch/", "tests/"]
+ignore = [
+  "PT009",
+]
