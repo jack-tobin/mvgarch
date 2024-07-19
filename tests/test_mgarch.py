@@ -93,3 +93,16 @@ class TestDCCGARCH(unittest.TestCase):
         params = [0.1, 0.85]
         qllf_value = DCCGARCH.qllf(params, [res, cvol])
         self.assertIsInstance(qllf_value, float)
+
+    def test_cov_to_vol(self):
+        input_cov = np.array(
+            [
+                [4.93690042e-04, -3.73173272e-05, -1.46581931e-05, -1.51337672e-05],
+                [-3.73173272e-05, 4.77765799e-04, -2.06584077e-05, 2.08711374e-05],
+                [-1.46581931e-05, -2.06584077e-05, 4.40738210e-04, 1.58433206e-05],
+                [-1.51337672e-05, 2.08711374e-05, 1.58433206e-05, 3.99299083e-04],
+            ],
+        )
+        expected_vols = np.array([0.022219, 0.021858, 0.020994, 0.019982])
+        vols = DCCGARCH().get_vols_from_cov(input_cov)
+        np.testing.assert_array_almost_equal(vols, expected_vols)

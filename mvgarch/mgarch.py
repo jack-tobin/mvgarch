@@ -54,6 +54,7 @@ class DCCGARCH:
     fc_ret_agg_simp: np.ndarray = field(init=False)
     fc_cov_agg_log: np.ndarray = field(init=False)
     fc_cov_agg_simp: np.ndarray = field(init=False)
+    fc_vol_agg_simp: np.ndarray = field(init=False)
 
     @property
     def returns(self) -> np.ndarray:
@@ -190,6 +191,12 @@ class DCCGARCH:
             self.fc_ret_agg_log,
             self.fc_cov_agg_log,
         )
+
+        self.fc_vol_agg_simp = self.get_vols_from_cov(self.fc_cov_agg_simp)
+
+    def get_vols_from_cov(self, cov: np.ndarray) -> np.ndarray:
+        """Get aggregated vol forecasts from aggregated simple covariance matrix."""
+        return np.sqrt(np.diag(cov))
 
     @staticmethod
     def dynamic_corr(
