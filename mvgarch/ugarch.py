@@ -1,7 +1,5 @@
 """Univariate GARCH modelling."""
 
-from dataclasses import dataclass, field
-
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
@@ -12,12 +10,11 @@ from arch.univariate.volatility import GARCH
 from pmdarima.arima import ARIMA
 
 
-@dataclass
 class UGARCH:
     """Univariate GARCH volatility modelling in Python.
 
     this object fits a GJR-GARCH model to a series of returns and stores
-    various items such as standardised residuals, fitted ARMA coefficients, etc.
+    various items such as standardized residuals, fitted ARMA coefficients, etc.
 
     This makes heavy use of the arch and pmdarima packages.
 
@@ -29,38 +26,35 @@ class UGARCH:
 
     """
 
-    order: tuple[int, int] = field(default=(1, 1))
-
-    _returns: np.ndarray = field(init=False)
-
-    asset: str = field(init=False)
-    dates: pd.DatetimeIndex = field(init=False)
-
-    mean_model: ARIMA = field(init=False)
-    vol_model: GARCH = field(init=False)
-    fitted_mean_model: ARIMA = field(init=False)
-    fitted_vol_model: ARCHModelResult = field(init=False)
-
-    phis: np.ndarray = field(init=False)
-    thetas: np.ndarray = field(init=False)
-    garch_params: np.ndarray = field(init=False)
-
-    arma_resids: np.ndarray = field(init=False)
-    resid: np.ndarray = field(init=False)
-    std_resid: np.ndarray = field(init=False)
-    cond_mean: np.ndarray = field(init=False)
-    cond_vol: np.ndarray = field(init=False)
-
-    n_ahead: int = field(init=False)
-    fc_vol_model: ARCHModelForecast = field(init=False)
-    fc_means: np.ndarray = field(init=False)
-    fc_var: np.ndarray = field(init=False)
-    fc_vol: np.ndarray = field(init=False)
-
-    def __post_init__(self) -> None:
-        self.order_p, self.order_q = self.order
+    def __init__(self, order: tuple[int, int]) -> None:
+        self.order = order
         if self.order != (1, 1):
             raise NotImplementedError("Orders other than (1, 1) are not implemented")
+
+        self.order_p, self.order_q = self.order
+
+        self._returns: np.ndarray = None
+        self.asset: str = None
+        self.dates: pd.DatetimeIndex = None
+        self.mean_model: ARIMA = None
+        self.vol_model: GARCH = None
+        self.fitted_mean_model: ARIMA = None
+        self.fitted_vol_model: ARCHModelResult = None
+
+        self.phis: np.ndarray = None
+        self.thetas: np.ndarray = None
+        self.garch_params: np.ndarray = None
+        self.arma_resids: np.ndarray = None
+        self.resid: np.ndarray = None
+        self.std_resid: np.ndarray = None
+        self.cond_mean: np.ndarray = None
+        self.cond_vol: np.ndarray = None
+        self.n_ahead: int = None
+
+        self.fc_vol_model: ARCHModelForecast = None
+        self.fc_means: np.ndarray = None
+        self.fc_var: np.ndarray = None
+        self.fc_vol: np.ndarray = None
 
     @property
     def returns(self) -> np.ndarray:
@@ -130,8 +124,8 @@ class UGARCH:
     def plot(self) -> plt.Axes:
         """Make a plot of the univariate GARCH fit results.
 
-        First panel is daily returns, second is unstandardised residuals,
-        third is standardised residuals, fourth is conditional mean, fifth
+        First panel is daily returns, second is un-standardized residuals,
+        third is standardized residuals, fourth is conditional mean, fifth
         is conditional volatility.
 
         """
@@ -146,14 +140,14 @@ class UGARCH:
         axes[0].set_title("Periodic returns")
         axes[0].yaxis.set_major_formatter(mtick.PercentFormatter())
 
-        # non-standardised residuals
+        # non-standardized residuals
         axes[1].plot(self.dates, self.resid)
-        axes[1].set_title("Unstandardised residuals")
+        axes[1].set_title("Unstandardized residuals")
         axes[1].yaxis.set_major_formatter(mtick.PercentFormatter())
 
-        # standardised residual
+        # standardized residual
         axes[2].plot(self.dates, self.std_resid)
-        axes[2].set_title("Standardised residuals")
+        axes[2].set_title("Standardized residuals")
 
         # conditional mean
         axes[3].plot(self.dates, self.cond_mean)
