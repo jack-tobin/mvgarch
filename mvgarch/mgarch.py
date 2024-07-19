@@ -3,7 +3,6 @@
 # ruff: noqa: N806
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -18,43 +17,44 @@ if TYPE_CHECKING:
     from mvgarch.ugarch import UGARCH
 
 
-@dataclass
 class DCCGARCH:
-    """Dyanmic Conditional Correlation (DCC) GARCH modelling.
+    """Dynamic Conditional Correlation (DCC) GARCH modelling.
 
     This follows the derivations from Engle and Sheppard (2001), Engle (2002),
     Peters (2004), and Galanos (2022).
 
     """
 
-    assets: list[str] = field(init=False)
-    dates: pd.Index = field(init=False)
-    _returns: np.ndarray = field(init=False)
-    n_periods: int = field(init=False)
-    n_assets: int = field(init=False)
-    ugarch_objs: list[UGARCH] = field(init=False)
+    def __init__(self) -> None:
+        self.assets: list[str] = []
+        self.dates: pd.Index = None
+        self._returns: np.ndarray = None
+        self.n_periods: int = None
+        self.n_assets: int = None
 
-    std_resids: np.ndarray = field(init=False)
-    cond_vols: np.ndarray = field(init=False)
-    cond_means: np.ndarray = field(init=False)
-    cond_cor: np.ndarray = field(init=False)
-    cond_cov: np.ndarray = field(init=False)
-    phis: np.ndarray = field(init=False)
-    thetas: np.ndarray = field(init=False)
-    dcc_a: int = field(init=False)
-    dcc_b: int = field(init=False)
+        self.ugarch_objs: list[UGARCH] = []
+        self.std_resids: np.ndarray = None
+        self.cond_vols: np.ndarray = None
+        self.cond_means: np.ndarray = None
+        self.cond_cor: np.ndarray = None
+        self.cond_cov: np.ndarray = None
 
-    n_ahead: int = field(init=False)
-    fc_means: np.ndarray = field(init=False)
-    fc_vols: np.ndarray = field(init=False)
-    fc_cor: np.ndarray = field(init=False)
-    fc_cov: np.ndarray = field(init=False)
+        self.phis: np.ndarray = None
+        self.thetas: np.ndarray = None
+        self.dcc_a: int = None
+        self.dcc_b: int = None
+        self.n_ahead: int = None
 
-    fc_ret_agg_log: np.ndarray = field(init=False)
-    fc_ret_agg_simp: np.ndarray = field(init=False)
-    fc_cov_agg_log: np.ndarray = field(init=False)
-    fc_cov_agg_simp: np.ndarray = field(init=False)
-    fc_vol_agg_simp: np.ndarray = field(init=False)
+        self.fc_means: np.ndarray = None
+        self.fc_vols: np.ndarray = None
+        self.fc_cor: np.ndarray = None
+        self.fc_cov: np.ndarray = None
+
+        self.fc_ret_agg_log: np.ndarray = None
+        self.fc_ret_agg_simp: np.ndarray = None
+        self.fc_cov_agg_log: np.ndarray = None
+        self.fc_cov_agg_simp: np.ndarray = None
+        self.fc_vol_agg_simp: np.ndarray = None
 
     @property
     def returns(self) -> np.ndarray:
@@ -78,7 +78,7 @@ class DCCGARCH:
         ugarch_objs : list[UGARCH]
             List of UGARCH class instances.
         returns : pd.DataFrame
-            Dataframe of asset returns to fit model to.
+            DataFrame of asset returns to fit model to.
 
         Raises
         ------
@@ -104,7 +104,7 @@ class DCCGARCH:
 
         This consists of two steps. In the first step, the univariate garch
         models are fit. This uses the arch package to perform this step. The
-        second step is to use the standardised residuals from the first step
+        second step is to use the standardized residuals from the first step
         to build the conditional correlation matrices. This step uses the method
         of Engle and Sheppard (2001) which uses maximum likelihood estimation
         to arrive at the conditional correlation matrices.
@@ -113,7 +113,7 @@ class DCCGARCH:
         for garch_obj in self.ugarch_objs:
             garch_obj.fit()
 
-        # matrices of standardised residuals and conditional volatilities
+        # matrices of standardized residuals and conditional volatilities
         self.std_resids = np.array([g.std_resid for g in self.ugarch_objs]).T
         self.cond_vols = np.array([g.cond_vol for g in self.ugarch_objs]).T
         self.cond_means = np.array([g.cond_mean for g in self.ugarch_objs]).T
@@ -207,14 +207,14 @@ class DCCGARCH:
     ) -> tuple[np.ndarray, np.ndarray]:
         """Compute dynamic conditional correlation array.
 
-        Bbased on standardised residuals and fitted a and b values.
+        Based on standardized residuals and fitted a and b values.
         Also computes dynamic conditional covariance arrays given
         conditional volatility data.
 
         Parameters
         ----------
         res : np.ndarray
-            np.ndarray of standardised residuals of each
+            np.ndarray of standardized residuals of each
             asset's returns
         cvol : np.ndarray
             np.ndarray of conditional volatilities of each asset
@@ -232,10 +232,10 @@ class DCCGARCH:
         """
         n_periods, n_assets = res.shape
 
-        # Qbar: uncondtional covariance matrix of standardised residuals
+        # Qbar: unconditional covariance matrix of standardized residuals
         Q_ = np.cov(res, rowvar=False)
 
-        # Z: outer products of standardised residuals at each time slice
+        # Z: outer products of standardized residuals at each time slice
         Z = np.zeros((n_assets, n_assets, n_periods))
         for i in range(n_periods):
             Z[:, :, i] = np.outer(res[i, :], res[i, :].T)
@@ -281,9 +281,9 @@ class DCCGARCH:
         Parameters
         ----------
         params : list[int]
-            List of integer paramters a and b
+            List of integer parameters a and b
         args : list[Any]
-            List of arguments; this contains the standardised
+            List of arguments; this contains the standardized
             residuals and conditional volatility arrays needed.
 
         Returns
@@ -395,7 +395,7 @@ class DCCGARCH:
 
         Converts a vector of expected log returns and a covariance matrix
         of log expected returns to a vector of expected simple returns and a
-        covariance matrix of simple epxected returns.
+        covariance matrix of simple expected returns.
 
         Parameters
         ----------
@@ -408,7 +408,7 @@ class DCCGARCH:
         -------
         tuple[np.ndarray, np.ndarray]
             mu_simp: Vector of simple expected returns
-            sigma_simp: Covarianc ematrix of simple returns.
+            sigma_simp: Covariance matrix of simple returns.
 
         """
         mu_simp = np.exp(mu_log + 0.5 * np.diag(sigma_log)) - 1
@@ -422,7 +422,7 @@ class DCCGARCH:
         """Create a matrix plot of the DCC fitting results.
 
         The resulting plot is a grid with conditional volatilities for each
-        asset plotted on the diagonal and pairwis conditional correlations
+        asset plotted on the diagonal and pairwise conditional correlations
         plotted on the off-diagonal.
 
         """
