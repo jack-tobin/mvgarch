@@ -26,12 +26,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip pytest
+          python -m pip install --upgrade pip
+          pip install pytest build hatch Cython>=3.0
           pip install -r requirements.txt
+
+      - name: Build the package
+        run: |
+          python3 -m build
+          pip install --force-reinstall dist/*.whl
+          rm -rf etlportfolio/
 
       - name: Run tests
         run: |
-          pytest  # or use the command specific to your test suite
+          pytest
 
   # Job 2: Build and Publish to PyPI
   publish:
