@@ -71,6 +71,10 @@ jobs:
           echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT  # Store the commit SHA
           git push
 
+      - name: Wait for push to complete
+        run: |
+          sleep 10  # Give GitHub a moment to process the push
+
   # Job 3: Build and Publish to PyPI
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
