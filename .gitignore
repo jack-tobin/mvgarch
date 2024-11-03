@@ -4,3 +4,8 @@ LICENSE
 venv
 .venv
 
+*.pyc
+*.c
+*.cpp
+*.so
+
