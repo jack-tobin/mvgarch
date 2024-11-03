@@ -7,6 +7,8 @@ import pandas as pd
 from mvgarch.mgarch import DCCGARCH
 from mvgarch.ugarch import UGARCH
 
+from mvgarch.optimized.correlation import dynamic_corr
+
 
 class TestDCCGARCH(unittest.TestCase):
     def setUp(self):
@@ -55,7 +57,7 @@ class TestDCCGARCH(unittest.TestCase):
         self.assertTrue((self.dccgarch._returns == self.returns.to_numpy()).all())
 
     @patch.object(DCCGARCH, "qllf")
-    @patch.object(DCCGARCH, "dynamic_corr")
+    @patch("mvgarch.mgarch.dynamic_corr")
     @patch.object(DCCGARCH, "estimate_params")
     def test_fit(self, mock_estimate_params, mock_dynamic_corr, mock_qllf):
         mock_qllf.return_value = -0.23
@@ -84,7 +86,7 @@ class TestDCCGARCH(unittest.TestCase):
         res = np.random.normal(size=(5, 2))
         cvol = np.random.normal(size=(5, 2))
         dcc_a, dcc_b = 0.1, 0.85
-        R, H = DCCGARCH.dynamic_corr(res, cvol, dcc_a, dcc_b)
+        R, H = dynamic_corr(res, cvol, dcc_a, dcc_b)
         self.assertEqual(R.shape, (2, 2, 5))
         self.assertEqual(H.shape, (2, 2, 5))
 

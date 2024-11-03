@@ -10,11 +10,13 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numpy.linalg import det, inv, matrix_power
+from numpy.linalg import det, inv
 from scipy.optimize import minimize
 
 if TYPE_CHECKING:
     from mvgarch.ugarch import UGARCH
+
+from mvgarch.optimized.correlation import forecast_corr, dynamic_corr, aggregate_forecasts
 
 
 class DCCGARCH:
@@ -125,7 +127,7 @@ class DCCGARCH:
 
         self.estimate_params()
 
-        self.cond_cor, self.cond_cov = self.dynamic_corr(
+        self.cond_cor, self.cond_cov = dynamic_corr(
             res=self.std_resids,
             cvol=self.cond_vols,
             dcc_a=self.dcc_a,
@@ -162,30 +164,24 @@ class DCCGARCH:
         self.fc_vols = np.array([g.fc_vol for g in self.ugarch_objs]).T
 
         # forecasting correlations
+        self.fc_cor, self.fc_cov = forecast_corr(
+            R0=R0,
+            R_=R_,
+            fc_vols=self.fc_vols,
+            dcc_a=self.dcc_a,
+            dcc_b=self.dcc_b,
+            n_ahead=self.n_ahead,
+            n_assets=self.n_assets,
+        )
 
-        # loop through steps ahead, creating a new correlation matrix for
-        # each step this follows the approach from Engle and Sheppard (2001)
-        # in which the authors solve forward the correlation matrix directly.
-        self.fc_cor = np.zeros((self.n_assets, self.n_assets, self.n_ahead))
-        for k in range(1, self.n_ahead + 1):
-            first_sum = np.zeros((self.n_assets, self.n_assets))
-            for i in range(k - 2 + 1):
-                first_sum += (
-                    (1 - self.dcc_a - self.dcc_b)
-                    * R_
-                    * ((self.dcc_a + self.dcc_b) ** i)
-                )
-            self.fc_cor[:, :, k - 1] = (
-                first_sum + (self.dcc_a + self.dcc_b) ** (k - 1) * R0
-            )
-
-        # convert correlation matrices to covariance matrices.
-        self.fc_cov = np.zeros((self.n_assets, self.n_assets, self.n_ahead))
-        for k in range(self.n_ahead):
-            D = np.diag(self.fc_vols[k, :])
-            self.fc_cov[:, :, k] = np.dot(D.T, np.dot(self.fc_cor[:, :, k], D))
-
-        self.aggregate_forecasts()
+        self.fc_ret_agg_log, fc_cov_agg_log = aggregate_forecasts(
+            fc_means=self.fc_means,
+            fc_cov=self.fc_cov,
+            phis=self.phis,
+            thetas=self.thetas,
+            n_ahead=self.n_ahead,
+            n_assets=self.n_assets,
+        )
 
         self.fc_ret_agg_simp, self.fc_cov_agg_simp = self.log_2_simple(
             self.fc_ret_agg_log,
@@ -197,78 +193,6 @@ class DCCGARCH:
     def get_vols_from_cov(self, cov: np.ndarray) -> np.ndarray:
         """Get aggregated vol forecasts from aggregated simple covariance matrix."""
         return np.sqrt(np.diag(cov))
-
-    @staticmethod
-    def dynamic_corr(
-        res: np.ndarray,
-        cvol: np.ndarray,
-        dcc_a: int,
-        dcc_b: int,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Compute dynamic conditional correlation array.
-
-        Based on standardized residuals and fitted a and b values.
-        Also computes dynamic conditional covariance arrays given
-        conditional volatility data.
-
-        Parameters
-        ----------
-        res : np.ndarray
-            np.ndarray of standardized residuals of each
-            asset's returns
-        cvol : np.ndarray
-            np.ndarray of conditional volatilities of each asset
-        dcc_a : int
-            DCC 'a' parameter
-        dcc_b : int
-            DCC 'b' parameter
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            R: 3d np.ndarray of conditional correlation matrices.
-            H: 2d np.ndarray of conditional covariance matrices.
-
-        """
-        n_periods, n_assets = res.shape
-
-        # Qbar: unconditional covariance matrix of standardized residuals
-        Q_ = np.cov(res, rowvar=False)
-
-        # Z: outer products of standardized residuals at each time slice
-        Z = np.zeros((n_assets, n_assets, n_periods))
-        for i in range(n_periods):
-            Z[:, :, i] = np.outer(res[i, :], res[i, :].T)
-
-        # compute Q matrices over time for proxy process
-        Q = np.zeros((n_assets, n_assets, n_periods))
-        for i in range(n_periods):
-            if i == 0:
-                Q[:, :, i] = Q_
-            else:
-                Q[:, :, i] = (
-                    (1 - dcc_a - dcc_b) * Q_
-                    + dcc_a * Z[:, :, i - 1]
-                    + dcc_b * Q[:, :, i - 1]
-                )
-
-        # convert to correlation matrices: Rt = Qt^* Qt Qt^*
-        R = np.zeros((n_assets, n_assets, n_periods))
-        for i in range(n_periods):
-            Q_star = np.diag(1 / np.sqrt(np.diag(Q[:, :, i])))
-            R[:, :, i] = np.dot(Q_star, np.dot(Q[:, :, i], Q_star))
-
-        # compute D matrices: Dt = diag{ht}
-        D = np.zeros((n_assets, n_assets, n_periods))
-        for i in range(n_periods):
-            D[:, :, i] = np.diag(cvol[i, :])
-
-        # compute H matrices: Ht = DtRtDt
-        H = np.zeros((n_assets, n_assets, n_periods))
-        for i in range(n_periods):
-            H[:, :, i] = np.dot(D[:, :, i], np.dot(R[:, :, i], D[:, :, i]))
-
-        return R, H
 
     @classmethod
     def qllf(cls, params: list[int], args: list) -> float:
@@ -296,16 +220,13 @@ class DCCGARCH:
         dcc_a, dcc_b = params
 
         n_periods = res.shape[0]
-
-        R = cls.dynamic_corr(res=res, cvol=cvol, dcc_a=dcc_a, dcc_b=dcc_b)[0]
+        R = dynamic_corr(res, cvol, dcc_a, dcc_b)[0]
         QL = -0.5 * np.sum(
             [
-                np.log(det(R[:, :, i]))
-                + np.dot(res[i, :].T, np.dot(inv(R[:, :, i]), res[i, :]))
+                np.log(det(R[:, :, i])) + np.dot(res[i, :].T, np.dot(inv(R[:, :, i]), res[i, :]))
                 for i in range(n_periods)
             ],
         )
-
         return QL * -1
 
     def estimate_params(self) -> None:
@@ -324,66 +245,6 @@ class DCCGARCH:
         )
 
         self.dcc_a, self.dcc_b = solution.x
-
-    def aggregate_forecasts(self) -> None:
-        """Produce an aggregated single forecast.
-
-        Aggregate  the covariance matrix and returns for a given forecast horizon.
-        This follows Hlouskova (2015).
-
-        NOTE: This is only built for (1, 1) orders at the moment.
-
-        """
-        self.fc_ret_agg_log = self.fc_means.sum(axis=0)
-
-        phis = np.diag(self.phis[:, 0])
-        thetas = np.diag(self.thetas[:, 0])
-
-        I = np.identity(self.n_assets)  # noqa: E741
-        Z = np.zeros((self.n_assets, self.n_assets))
-
-        # make companion matrices E1, E and Phi
-        # E1 is one I followed by subsequent Z
-        # E is I at rt and et and 0 otherwise
-        # Phi contains diagonal phi and theta matrices
-        E1 = np.concatenate([I, Z], axis=0)
-        E = np.concatenate([I, I], axis=0)
-        Phi = np.concatenate(
-            [np.concatenate([phis, thetas], axis=1), np.concatenate([Z, Z], axis=1)],
-            axis=0,
-        )
-
-        first_sum = np.zeros((self.n_assets * 2, self.n_assets * 2))
-        for i in range(1, self.n_ahead + 1):
-            for k in range(i):
-                # formula here is Phi^k * E * sigma_i * (Phi^k E)'
-                first_sum += np.dot(
-                    np.dot(matrix_power(Phi, k), E),
-                    np.dot(
-                        self.fc_cov[:, :, i - k - 1],
-                        np.dot(matrix_power(Phi, k), E).T,
-                    ),
-                )
-
-        second_sum = np.zeros((self.n_assets * 2, self.n_assets * 2))
-        for i, j in product(range(1, self.n_ahead + 1), range(1, self.n_ahead + 1)):
-            if i == j:
-                continue
-
-            for k in range(max(0, i - j), i):
-                # formula here is Phi^k * E * sigma_i * (Phi^(j-i+k) * K)'
-                second_sum += np.dot(
-                    np.dot(matrix_power(Phi, k), E),
-                    np.dot(
-                        self.fc_cov[:, :, i - k],
-                        np.dot(matrix_power(Phi, j - i + k), E).T,
-                    ),
-                )
-
-        self.fc_cov_agg_log = np.dot(E1.T, np.dot(first_sum, E1)) + np.dot(
-            E1.T,
-            np.dot(second_sum, E1),
-        )
 
     @classmethod
     def log_2_simple(
