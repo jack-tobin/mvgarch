@@ -36,7 +36,7 @@ jobs:
   # Job 2: Build and Publish to PyPI
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, bump-version]
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
