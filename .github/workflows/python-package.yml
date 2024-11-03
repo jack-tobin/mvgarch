@@ -85,7 +85,7 @@ jobs:
       id-token: write
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ needs.bump-version.outputs.new_sha }}  # Use the SHA from bump-version job
