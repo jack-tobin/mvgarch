@@ -12,9 +12,6 @@ jobs:
   # Job 1: Run Tests
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10']
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -22,19 +19,27 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest build hatch Cython>=3.0
+          pip install build pytest numpy Cython>=3.0 wheel setuptools
           pip install -r requirements.txt
 
       - name: Build the package
+        run: python setup.py bdist_wheel
+
+      - name: Install built package
         run: |
-          python3 -m build
-          pip install --force-reinstall dist/*.whl
+          pip install dist/*.whl
           rm -rf etlportfolio/
+          echo "Removed source code"
 
       - name: Run tests
         run: |
@@ -61,28 +66,20 @@ jobs:
           python-version: '3.10'
 
       - name: Bump version
+        run: sh scripts/bump_version.sh
+
+      - name: Install system dependencies
         run: |
-          current_version=$(cat pyproject.toml | grep version | head -n 1 | awk -F' = ' '{print $2}' | sed 's/"//g')
-          echo "Current version: $current_version"
-          IFS='.' read -r major minor patch <<< "$current_version"
-          new_patch=$((patch + 1))
-          new_version="${major}.${minor}.${new_patch}"
-          echo "New version: $new_version"
-          sed -i "s/^version = .*/version = \"$new_version\"/" pyproject.toml
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev
 
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add pyproject.toml
-          git commit -m "Bump version to $new_version"
-          git push
-
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build pytest numpy Cython>=3.0 wheel setuptools
 
       - name: Build the package
-        run: python -m build
+        run: python setup.py bdist_wheel --plat-name=any
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
