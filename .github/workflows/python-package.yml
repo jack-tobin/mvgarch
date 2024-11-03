@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_sha: ${{ steps.commit.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,6 +68,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add pyproject.toml
           git commit -m "Bump version to $new_version"
+          echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT  # Store the commit SHA
           git push
 
   # Job 3: Build and Publish to PyPI
@@ -80,8 +83,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ needs.bump-version.outputs.new_sha }}  # Use the SHA from bump-version job
 
       - name: Set up Python
         uses: actions/setup-python@v4
