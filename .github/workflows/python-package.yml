@@ -87,6 +87,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           ref: ${{ needs.bump-version.outputs.new_sha }}  # Use the SHA from bump-version job
 
       - name: Set up Python
