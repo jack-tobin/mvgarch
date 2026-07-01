@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "mvgarch"
-version = "2.0.1"
+version = "2.0.2"
 authors = [
   { name="Jack Tobin", email="tobjack330@gmail.com" },
 ]
